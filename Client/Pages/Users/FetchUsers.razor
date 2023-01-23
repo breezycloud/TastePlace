@@ -1,0 +1,112 @@
+﻿@page "/users"
+@attribute [Authorize(Roles = "Admin, Master")]
+
+@if (AppState.IsBusy)
+{
+    <LoaderRows />
+}
+else
+{
+    <MudTable Items="@Users" Vitualize="true" Dense="true" Hover="@true" Outlined="true"
+          OnRowClick="RowClickEvent" T="User">
+        <HeaderContent>
+            <MudTh>First Name</MudTh>
+            <MudTh>Last Name</MudTh>
+            <MudTh>Mobile No</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Access Level</MudTh>
+            <MudTh Style="text-align:center">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="First Name">@context.FirstName</MudTd>
+            <MudTd DataLabel="Last Name">@context.LastName</MudTd>
+            <MudTd DataLabel="Mobile No">@context.MobileNo1</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="Access Level">@context.Role.ToString()</MudTd>
+                <MudTd DataLabel="Actions" Class="d-flex align-center justify-center gap-1">
+                    <AuthorizeView Roles="Master, Admin, Manager" Context="R">
+                        <MudTooltip Text="Edit User" Placement="Placement.Top">
+                            <MudFab Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                            IconSize="Size.Small" Color="Color.Info"
+                            OnClick="@(() => EditUserDialog(context.Id))" />
+                        </MudTooltip>                        
+                        <MudTooltip Text="Delete" Duration="1000" Placement="Placement.Top">
+                            <MudFab Disabled="@AppState.IsProcessing" Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                            OnClick="@(async () => await DeleteUser(context))" IconSize="Size.Small" Color="Color.Secondary" />
+                        </MudTooltip>
+                    </AuthorizeView>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    <AuthorizeView Roles="Master, Admin, Manager">
+        <div class="fabs-container">
+            <MudFab OnClick="@(() => nav.NavigateTo("newuser"))" Class="fab" Color="Color.Primary" Icon="@Icons.Material.Filled.Add" />
+        </div>
+    </AuthorizeView>
+}
+
+@code {
+    User[] Users = Array.Empty<User>();
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.IsBusy = true;
+        LayoutService.CurrentMenu = "Users";       
+        LayoutService.OnMajorUpdateOccured();
+        try
+        {
+            await Task.Yield();
+        }
+        finally
+        {
+            AppState.IsBusy = false;                    
+        }
+    }
+
+    private void EditUserDialog(Guid id) => nav.NavigateTo($"/edituser/{id}");
+
+    private async ValueTask<bool> Confirmation(string operationType)
+    {
+        bool? result = await Dialog.ShowMessageBox("Confirmation",
+        $"Do you wish to {operationType} User?",
+         yesText: "Yes", cancelText: "No");
+        if (result is null)
+            return false;
+
+        return true;
+    }
+
+    private void RowClickEvent(TableRowClickEventArgs<User> tableRowClickEventArgs)
+    {
+        EditUserDialog(tableRowClickEventArgs.Item.Id);
+    }
+
+    private async Task DeleteUser(User model)
+    {
+        AppState.IsProcessing = true;
+        var promptResult = await Confirmation("Delete");
+        if (!promptResult)
+        {
+            AppState.IsProcessing = false;
+            return;
+        }        
+        try
+        {            
+            snackBar.Add("User Successfully Deleted", Severity.Success);
+            await OnInitializedAsync();
+
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            snackBar.Add("Operation failed", Severity.Error);
+        }
+        finally
+        {
+            AppState.IsProcessing = false;
+        }        
+    }
+
+}

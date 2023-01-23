@@ -1,0 +1,51 @@
+﻿@*@inject Synchronizer DataSynchronizer*@
+
+@*@if (DataSynchronizer.IsUpload)
+{
+    <div class="sync-container">
+        <MudPaper Class="pa-4" Style="background:white;" Width="300" Height="350">
+            <MudText Color="Color.Inherit" Align="MudBlazor.Align.Center">@DataSynchronizer.SyncLabel</MudText>
+            <MudProgressLinear Color="Color.Primary" Value="@DataSynchronizer.SyncCompleted" Size="Size.Large" Class="my-7">
+                <MudText Typo="Typo.subtitle2" Color="Color.Dark">
+                    <b>@string.Format("{0}%", DataSynchronizer.SyncCompleted)</b>
+                </MudText>
+            </MudProgressLinear>
+        </MudPaper>
+    </div>
+}*@
+
+@code {
+    //Exception? syncException;
+    //HubConnection? hub;
+    //protected override async Task OnInitializedAsync()
+    //{
+    //    await base.OnInitializedAsync();
+
+    //    await js.InvokeVoidAsync("Syncer.Initialize", DotNetObjectReference.Create(this));
+    //}
+
+    //[JSInvokable("StartSync")]
+    //public async Task Sync()
+    //{
+    //    if (AppState.IsDownload || AppState.IsUpload) { return; }
+    //    AppState.IsDownload = false; AppState.IsUpload = true;
+    //    await Task.Delay(2000);
+    //    AppState.IsDownload = false; AppState.IsUpload = false;
+    //    //await DataSynchronizer.Upload();
+    //    //DataSynchronizer.OnUpdate += StateHasChanged;
+    //    //DataSynchronizer.OnError += HandleSyncError;
+    //}
+
+    //public async ValueTask DisposeAsync()
+    //{
+    //    DataSynchronizer.OnUpdate -= StateHasChanged;
+    //    DataSynchronizer.OnError -= HandleSyncError;
+    //    await js.InvokeVoidAsync("Syncer.Dispose");
+    //}
+
+    //void HandleSyncError(Exception ex)
+    //{
+    //    syncException = ex;
+    //    StateHasChanged();
+    //}
+}

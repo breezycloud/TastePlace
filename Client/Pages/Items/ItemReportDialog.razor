@@ -1,0 +1,120 @@
+﻿@if (AppState.IsBusy)
+{
+    <Loader/>
+}
+else
+{
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">Items Report</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid Class="pa-3" Spacing="2">
+                <MudItem xs="12" Class="d-flex align-center justify-center">
+                    <MudRadioGroup @bind-SelectedOption="SelectedOption">
+                        <MudRadio Color="Color.Tertiary" Option="@("All")">Category</MudRadio>
+                        <MudRadio Color="Color.Secondary" Option="@("Selected")">Product</MudRadio>
+                    </MudRadioGroup>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect Dense="true" AnchorOrigin="Origin.BottomCenter" Strict="true" T="Guid"
+                           Label="Category" Value="Category.Id" Variant="Variant.Outlined" ValueChanged="@CategoryValueChanged">
+                        @foreach (Category category in AppState.Categories)
+                        {
+                            <MudSelectItem Value="@category.Id">@category.CategoryName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    @if (SelectedOption == "Selected")
+                    {
+                        <MudSelect Dense="true" AnchorOrigin="Origin.BottomCenter" Strict="true" T="MenuItem"
+                           Label="Item" Variant="Variant.Outlined" Value="@Item" ValueChanged="@ItemValueChanged">
+                            @foreach (MenuItem item in Items!)
+                            {
+                                <MudSelectItem Value="@item">@item.MenuName</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                </MudItem>
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton Disabled="AppState.IsProcessing" OnClick="GetReportItems" ButtonType="ButtonType.Submit" Variant="Variant.Filled"
+                   Color="Color.Primary">@(AppState.IsProcessing ? "Processing" : "Download")</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    private string? SelectedOption { get; set; } = "All";
+    private Category Category { get; set; } = new();
+    protected override async Task OnInitializedAsync()
+    {
+        AppState!.IsBusy = true;
+        await Task.Delay(300);
+        await LoadItems();
+        AppState!.IsBusy = false;
+    }
+
+    async Task LoadItems()
+    {        
+        try
+        {
+            await Task.Yield();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+        }
+    }
+
+    void CategoryValueChanged(Guid category)
+    {
+    }
+    MenuItem? Item = null;
+    MenuItem[]? Items = null;
+    void ItemValueChanged(MenuItem item)
+    {
+        Item = item;
+    }
+    async Task GetReportItems()
+    {
+        AppState.IsProcessing = true;
+        if (SelectedOption == string.Empty)
+        {
+            snackBar.Add("Select Report Option", Severity.Warning);
+            AppState.IsProcessing = false;
+            return;
+        }
+        else if (SelectedOption == "All" && Category.Id == Guid.Empty)
+        {
+            snackBar.Add("Select Category", Severity.Warning);
+            AppState.IsProcessing = false;
+            return;
+        }
+        else if (SelectedOption == "Selected" && Item is null)
+        {
+            snackBar.Add("Select Item", Severity.Warning);
+            AppState.IsProcessing = false;
+            return;
+        }
+        await Task.Yield();
+        string? reportHeader = string.Empty;        
+        try
+        {
+            
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+        }
+        AppState.IsProcessing = false;
+    }
+}

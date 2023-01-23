@@ -1,0 +1,118 @@
+@page "/orders"
+@attribute [Authorize]
+
+
+@if (Orders == null)
+{
+    <LoaderRows />
+}
+else
+{
+    <MudTable Items="@Orders" Virtualize="true" Dense="true" Hover="true" Striped="true" Outlined="true"
+          Filter="new Func<Order, bool>(FilterFunc)">
+        <ToolBarContent>
+            <MudTooltip Text="Report" Duration="1000" Placement="Placement.Top">
+                <MudIconButton Icon="@Icons.Material.Filled.Print" OnClick="@(() => Dialog.Show<SalesReportDialog>())" />
+            </MudTooltip>
+            <MudSpacer/>
+            <MudTextField @bind-Value="searchString" Placeholder="Search" Immediate="true"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0">
+            </MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Customer</MudTh>
+            <MudTh>Receipt #</MudTh>
+            <MudTh>Date</MudTh>
+            <MudTh Style="text-align:right;">Total</MudTh>
+            <MudTh Style="text-align:right;">Paid</MudTh>
+            <MudTh Style="text-align:right;">Balance</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Customer">@context.Customer!.FullName</MudTd>
+            <MudTd DataLabel="Receipt #">@context.ReceiptNo</MudTd>
+            <MudTd DataLabel="Date">@context.DateCreated</MudTd>
+            <MudTd DataLabel="Total" Style="text-align:right;">@context.TotalAmount.ToString("N2")</MudTd>
+            <MudTd DataLabel="Paid" Style="text-align:right;">@context.Payments!.Sum(x => x.Amount).ToString("N2")</MudTd>
+            <MudTd DataLabel="Balance" Style="text-align:right;">@context.Balance.ToString("N2")</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudTooltip Text="Manage Order">
+                    <MudFab Icon="@Icons.Material.Filled.Edit" OnClick="@(() => NavigateMenu(context))"
+                        Size="Size.Small" IconSize="Size.Small" Color="Color.Secondary" />
+                </MudTooltip>
+                <MudTooltip Text="Share Receipt">
+                    <MudFab Disabled="@isPrinting" Icon="@Icons.Material.Filled.Share" OnClick="@(() => Share(@context))"
+                        Size="Size.Small" IconSize="Size.Small" Color="Color.Success" />
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+    <div class="fabs-container">
+        <MudFab Class="fab" Color="Color.Primary" @onclick="@(() => nav.NavigateTo("neworder"))" Icon="@Icons.Material.Filled.Add" />
+    </div>
+}
+
+@code {
+    
+    private bool isPrinting = false;
+    private string searchString = "";
+    private Order[]? Orders = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        LayoutService.CurrentMenu = "Manage Orders";
+        LayoutService.OnMajorUpdateOccured();
+        await Task.Delay(300);
+        await LoadOrders();
+    }
+    async Task LoadOrders()
+    {
+        await Task.Yield();
+        //AppState!.Context = await Factory.GetPreparedDbContextAsync();
+        //Orders = await AppState!.Context!.Orders.Include(x => x!.Customer!)
+        //                                        .Include(x => x!.OrderItems!)
+        //                                        .ThenInclude(x => x.Item)
+        //                                        .ThenInclude(x => x!.Category)
+        //                                        .Include(x => x.PaymentDetails)
+        //                                        .OrderByDescending(x => x.TransactionDate)
+        //                                        .AsSplitQuery()
+        //                                        .ToArrayAsync();
+    }   
+
+    private bool FilterFunc(Order order)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (order!.Customer!.FullName!.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (order.DateCreated.ToString().Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (order!.ReceiptNo!.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
+    private void NavigateMenu(Order order)
+    {
+        AppState.Order = order;
+        nav.NavigateTo("manageorder");
+    }    
+
+    private async Task Share(Order order)
+    {
+        try
+        {
+            isPrinting = true;
+            await Task.Delay(0);
+            await Dialog.ShowMessageBox("Notification", "Function in progress");
+            isPrinting = false;
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+}

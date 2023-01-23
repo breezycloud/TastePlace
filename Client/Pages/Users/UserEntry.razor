@@ -1,0 +1,113 @@
+﻿@page "/newuser"
+@page "/edituser/{id:guid}"
+@attribute [Authorize(Roles = "Admin")]
+
+@if (AppState.IsBusy)
+{
+    <LoaderRows />
+}
+else
+{
+    <EditForm Model="@user" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="First name" @bind-Value="user!.FirstName"
+                          For="@(() => user!.FirstName)"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="Last name" @bind-Value="user!.LastName"
+                          For="@(() => user!.LastName)"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="Contact No1" @bind-Value="user!.MobileNo1"
+                          For="@(() => user!.MobileNo1)"></MudTextField>
+            </MudItem>            
+            <MudItem xs="12" sm="6">
+                <MudTextField Label="Email" Margin="Margin.Dense" @bind-Value="user!.Email" For="@(() => user!.Email)" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect Strict="true" Variant="Variant.Outlined" @bind-Value="user!.Role" Label="Access Level" AnchorOrigin="Origin.BottomCenter" Dense="true">
+                    <MudSelectItem Value="@(UserRole.Admin)">Admin</MudSelectItem>
+                    <MudSelectItem Value="@(UserRole.Kitchen)">Kitchen</MudSelectItem>
+                    <MudSelectItem Value="@(UserRole.Rider)">Rider</MudSelectItem>
+                </MudSelect>
+            </MudItem>            
+            <MudItem xs="12" Class="d-flex justify-center align-center gap-4">
+                <MudFab Color="Color.Dark" Label="Back" OnClick="@(() => nav.NavigateTo("users"))"
+                    Style="width:200px;" Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" />
+                <MudFab ButtonType="ButtonType.Submit" Color="Color.Primary" Label="@(AppState.IsProcessing ? "Processing" : "Save")"
+                    Style="width:200px;"
+                    Disabled="@AppState.IsProcessing" Size="Size.Small" EndIcon="@Icons.Material.Filled.Save" />
+            </MudItem>            
+        </MudGrid>
+    </EditForm>
+}
+
+@code {
+    private User? user = new();
+    [Parameter] public Guid id { get; set; }
+    public bool isEdit => id == Guid.Empty ? false : true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        AppState.IsBusy = true;        
+        LayoutService.CurrentMenu = id == Guid.Empty ? "New User" : "Edit User";
+        LayoutService.OnMajorUpdateOccured();
+        await Task.Delay(500);        
+        try
+        {
+            if (!isEdit)
+            {
+                user = new();
+            }
+            else
+            {
+                user!.Id = id;                
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            AppState.IsBusy = false;
+        }
+    }
+
+    private async Task Save()
+    {
+        AppState.IsProcessing = true;
+        var prompt = await Dialog.ShowMessageBox("Confirmation", "Do you wish to save?", yesText: "Yes", cancelText: "No");
+        if (prompt is null || !prompt.Value)
+        {
+            AppState.IsProcessing = false;
+            return;
+        }        
+        try
+        {
+            user!.FirstName = StringConverter.ConvertToTitleCase(user.FirstName!);
+            user.LastName = StringConverter.ConvertToTitleCase(user.LastName!);
+            if(!isEdit)
+            {
+                snackBar.Add("User Successfully Added", Severity.Success);
+                user = new();
+            }
+            else
+            {
+                snackBar.Add("User Successfully Edited", Severity.Success);
+                await OnParametersSetAsync();
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }   
+        finally 
+        {
+            AppState.IsProcessing = false;
+        }
+    }
+}

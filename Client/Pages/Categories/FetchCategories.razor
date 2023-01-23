@@ -1,0 +1,105 @@
+@page "/categories"
+@attribute [Authorize]
+
+
+@if (categories is null)
+{
+    <LoaderRows/>
+}
+else
+{
+    <MudDataGrid Items="@categories" Outlined="true" Elevation="2" Dense="true">
+        <ToolBarContent>            
+            <MudSpacer />
+            <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <Columns>
+            <Column T="Category" Field="CategoryName" Title="Item" Filterable="true"/>
+            <Column T="Category" Field="DateCreated" Title="Date Modified"/>
+            <Column T="Category" Title="Actions" Context="context">
+                <CellTemplate>
+                    <MudFab Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Edit" OnClick="@(() => Edit(context.Item))" />
+                    <MudFab Disabled="@isDeleting" Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.Delete" OnClick="@(() => Delete(context.Item))"/>
+                </CellTemplate>
+            </Column>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="Category" />
+        </PagerContent>
+    </MudDataGrid>
+    <div class="fabs-container">
+        <MudFab Class="fab" OnClick="@(() => { Dialog.Show<CategoryEntry>(""); } )" 
+            Color="Color.Primary" Icon="@Icons.Material.Filled.Add" />        
+    </div>
+}
+
+@code{
+    private string searchString = string.Empty;
+    private bool isDeleting = false;
+    private Category[]? categories = null;
+    DialogOptions options = new DialogOptions { CloseButton = true };
+    private HubConnection? hub;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        LayoutService.CurrentMenu = "Manage Categories";
+        LayoutService.OnMajorUpdateOccured();
+        try
+        {
+            hub = new HubConnectionBuilder().WithUrl(nav.ToAbsoluteUri("/hubs")).WithAutomaticReconnect().Build();
+            await hub.StartAsync();
+            hub.On("UpdateCategories", async () =>
+            {
+                await LoadData();
+                StateHasChanged();
+            });
+            await LoadData();
+        }
+        finally
+        {
+            AppState.IsBusy = false;            
+        }        
+    }
+
+    public async Task LoadData()
+    {
+        categories = await MenuService.GetCategories();
+    }
+
+    void Edit(Category category)
+    {        
+        var parameters = new DialogParameters
+        {  
+            ["Category"] = category, 
+            ["isAdd"] = false            
+        };
+        Dialog.Show<CategoryEntry>("", parameters: parameters, options);
+    }
+
+    private async Task Delete(Category category)
+    {
+        isDeleting = true;
+        var prompt = await Dialog.ShowMessageBox("Confirmation", "Do you wish to delete", yesText:"Yes", cancelText:"No");
+        if (prompt is null)
+        {
+            isDeleting = false;
+            return;
+        }        
+        try
+        {
+            await MenuService.DeleteCategory(category.Id);
+            await hub!.SendAsync("UpdateCategories");
+            snackBar.Add("Category Successfully Deleted", Severity.Success);            
+        }
+        catch
+        {
+            snackBar.Add("An Error Occured", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
+        }        
+    }
+
+}

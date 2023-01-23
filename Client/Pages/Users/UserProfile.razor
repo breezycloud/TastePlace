@@ -1,0 +1,125 @@
+﻿@page "/profile/{id:guid}"
+@attribute [Authorize]
+
+@if (AppState.IsBusy)
+{
+        <LoaderRows />
+}
+else
+{
+    <EditForm Model="@user" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+        <MudGrid Spacing="2">            
+            <MudItem xs="12" Class="object-center">
+                <div class="d-flex align-center justify-center">
+                    <MudImage ObjectFit="ObjectFit.Cover" Src="@string.Format("data:image/{0};base64,{1}", user!.ImageFormat, user!.ImageUrl)"
+                          Class="rounded-circle" Height="192" Width="192" />
+                </div>                
+                <div class="d-flex align-center justify-center">
+                    <InputFile id="fileInput112" OnChange="UploadFiles" hidden accept=".jpg, .jpeg, .png" />
+                    <MudIconButton HtmlTag="label"
+                               Color="Color.Info"
+                               Icon="@Icons.Material.Filled.PhotoCamera"
+                               for="fileInput112">
+                    </MudIconButton>
+
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="First name" @bind-Value="user!.FirstName"
+                        For="@(() => user!.FirstName)"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="Last name" @bind-Value="user!.LastName"
+                        For="@(() => user!.LastName)"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="Contact No1" @bind-Value="user!.MobileNo1"
+                        For="@(() => user!.MobileNo1)"></MudTextField>
+            </MudItem>            
+            <MudItem xs="12" sm="6">
+                <MudTextField Label="Email" Margin="Margin.Dense" @bind-Value="user!.Email" For="@(() => user!.Email)" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Label="Access Level" ReadOnly="true" Margin="Margin.Dense" @bind-Value="user!.Role" For="@(() => user!.Role)" Variant="Variant.Outlined" />
+            </MudItem>            
+            <MudItem xs="12" Class="d-flex justify-center align-center mt-2">                    
+                <MudFab ButtonType="ButtonType.Submit" Color="Color.Primary" Label="@(AppState.IsProcessing ? "Processing" : "Save")"
+                Style="width:200px;" Disabled="@AppState.IsProcessing" Size="Size.Small" EndIcon="@Icons.Material.Filled.Save" />
+            </MudItem>            
+        </MudGrid>
+    </EditForm>
+}
+
+@code {
+    private User? user = new();
+    [Parameter] public Guid id { get; set; }
+    public bool isEdit => id == Guid.Empty ? false : true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        AppState.IsBusy = true;
+        LayoutService.CurrentMenu = "My Profile";
+        LayoutService.OnMajorUpdateOccured();
+        await Task.Delay(500);        
+        try
+        {
+            if (!isEdit)
+            {
+                user = new();
+            }
+            else
+            {
+                user!.Id = id;                
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            AppState.IsBusy = false;
+        }
+    }
+
+    private async Task Save()
+    {
+        AppState.IsProcessing = true;
+        var prompt = await Dialog.ShowMessageBox("Confirmation", "Do you wish to save?", yesText: "Yes", cancelText: "No");
+        if (prompt is null || !prompt.Value)
+        {
+            AppState.IsProcessing = false;
+            return;
+        }        
+        try
+        {
+            user!.FirstName = StringConverter.ConvertToTitleCase(user.FirstName!);
+            user.LastName = StringConverter.ConvertToTitleCase(user.LastName!);            
+                        
+
+            snackBar.Add("Profile Successfully Edited", Severity.Success);
+            await OnParametersSetAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            AppState.IsProcessing = false;
+        }
+    }
+
+    private async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        MemoryStream ms = new();
+        string format = Path.GetExtension(e.File.Name);
+        user!.ImageFormat = format.Substring(1);
+        Console.WriteLine(user!.ImageFormat);
+        var image = await e.File.RequestImageFileAsync($"image/{format}", 192, 192);
+        await image.OpenReadStream().CopyToAsync(ms);
+        user!.ImageUrl = Convert.ToBase64String(ms.ToArray());        
+        StateHasChanged();
+    }
+}

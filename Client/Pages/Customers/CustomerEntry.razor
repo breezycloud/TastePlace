@@ -1,0 +1,144 @@
+@page "/customer/{isAddEdit:bool}"
+@page "/customer/{isAddEdit:bool}/{Id:guid}"
+@attribute [Authorize]
+
+@if (AppState.IsBusy)
+{
+    <LoaderRows/>
+}
+else
+{
+    <EditForm Model="@customer" OnValidSubmit="OnValidSubmit">
+        <DataAnnotationsValidator />
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="First name" @bind-Value="customer!.FirstName"
+                          For="@(() => customer!.FirstName)"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="Last name" @bind-Value="customer!.LastName"
+                          For="@(() => customer!.LastName)"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="Contact No1" @bind-Value="customer!.MobileNo1"
+                          For="@(() => customer!.MobileNo1)"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Label="Email" Margin="Margin.Dense" @bind-Value="customer!.Email" For="@(() => customer!.Email)" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="Home Address" @bind-Value="customer!.ContactAddress"
+                          For="@(() => customer!.ContactAddress)" Lines="4"></MudTextField>
+            </MudItem>            
+            <MudItem xs="12" sm="6">
+                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" Label="Home Address" @bind-Value="customer!.ContactAddress"
+                          For="@(() => customer!.ShippingAddress)" Lines="4"></MudTextField>
+            </MudItem>            
+            <MudItem xs="12" sm="6">
+                <div class="d-flex justify-center align-center">
+                    <MudFab Color="Color.Dark" Label="Back" OnClick="@(() => nav.NavigateTo("customers"))"
+                        Style="width:200px;" Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" />
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <div class="d-flex justify-center align-center">
+                    <MudFab ButtonType="ButtonType.Submit" Color="Color.Primary" Label="@(AppState.IsProcessing ? "Processing" : "Save")"
+                        Style="width:200px;" 
+                        Disabled="@AppState.IsProcessing" Size="Size.Small" EndIcon="@Icons.Material.Filled.Save" />
+                </div>
+            </MudItem>
+    </MudGrid>
+</EditForm>
+}
+
+@code {
+
+    private Customer? customer = new();
+    [Parameter] public Guid id { get; set; }
+    [Parameter] public bool isAddEdit { get; set; }
+    private string operationType => isAddEdit ? "Added" : "Edited";    
+
+    protected override async Task OnParametersSetAsync()
+    {
+        AppState.IsBusy = true;
+        LayoutService.CurrentMenu = id == Guid.Empty ? "New Customer" : "Edit Customer";
+        LayoutService.OnMajorUpdateOccured();
+        try
+        {
+            await Task.Yield();
+            if (isAddEdit)
+            {
+                customer = new();
+            }
+            else
+            {
+                customer!.Id = id;                
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex);
+        }            
+        finally
+        {
+            AppState.IsBusy = false;            
+        }
+    }    
+
+    private async Task OnValidSubmit()
+    {        
+        AppState.IsProcessing = true;
+        try
+        {           
+            var prompt = await Dialog.ShowMessageBox("Confirmation", $"Do you wish to {(isAddEdit ? "Add" : "Edit")} Customer data", yesText:"Yes", cancelText:"No");
+            if (prompt is null)
+            {
+                AppState.IsProcessing = false;
+                return;
+            }
+            else if (!prompt.Value)
+            {
+                AppState.IsProcessing = false;
+                return;
+            }            
+            customer!.FirstName = StringConverter.ConvertToTitleCase(customer.FirstName!);
+            customer.LastName = StringConverter.ConvertToTitleCase(customer.LastName!);       
+            if (isAddEdit)
+            {
+                //var customerExist = AppState.Context.UserCredentials.OfType<Customer>()
+                //                                .Where(x => x.MobileNo1 == customer.MobileNo1! 
+                //                                    || x.MobileNo2 == customer.MobileNo2).FirstOrDefault();
+                //if (customerExist is not null)
+                //{
+                //    await Dialog.ShowMessageBox("Warning", $"{customerExist!.CustomerName} already registered with this Phone No: {customerExist.MobileNo1}");
+                //    AppState.IsProcessing = false;
+                //    return;
+                //}                
+                snackBar.Add("Customer Successfully Added", Severity.Success);
+                customer = new();
+            }
+            else
+            {
+                snackBar.Add("Customer Successfully Edited", Severity.Success);                
+            }            
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine($"{ex.Message} {ex.Data} {ex.StackTrace} {ex.Source} {ex.InnerException}");
+        }
+        finally
+        {            
+            AppState.IsProcessing = false;
+        }
+    }    
+    
+
+    void ClearSelection()
+    {
+        customer = new();
+        if (!isAddEdit)
+        {
+            nav.NavigateTo("customers");
+        }
+    }
+}

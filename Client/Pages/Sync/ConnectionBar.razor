@@ -1,0 +1,61 @@
+@*@inject Synchronizer DataSynchronizer*@
+@implements IAsyncDisposable
+
+@*@if (DataSynchronizer.IsDownload)
+{
+    <MudProgressCircular Size="Size.Small" Color="Color.Primary" Value="@DataSynchronizer.SyncCompleted" />
+}*@
+<ConnectionStatus>
+    <Online>
+        <MudTooltip Duration="1000" Text="Online">
+            <MudIconButton Icon="@Icons.Material.Rounded.OnlinePrediction" Color="Color.Success"/>
+        </MudTooltip>
+    </Online>
+    <Offline>
+        <MudTooltip Duration="1000" Text="Offline">
+            <MudIconButton Icon="@Icons.Material.Outlined.SignalWifiConnectedNoInternet4" Color="Color.Error"/>
+        </MudTooltip>
+    </Offline>
+</ConnectionStatus>
+
+@code {
+    Exception? syncException;
+    HubConnection? hub;
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.Token = await localStorage.GetItemAsync<string>("token");
+        AppState.IsConnected = await localStorage.GetItemAsync<bool>("mode");        
+        hub = new HubConnectionBuilder().WithUrl(nav.ToAbsoluteUri("/hubs"), option =>
+        {
+            option.AccessTokenProvider = () => Task.FromResult(AppState.Token)!;
+        }).WithAutomaticReconnect().Build();
+        if (!AppState.IsConnected)
+            return;
+
+
+        AppState.IsDownload = true;
+        hub.On("Download", () =>
+        {
+            //DataSynchronizer.OnUpdate += StateHasChanged;
+            //DataSynchronizer.OnError += HandleSyncError;
+            //if (DataSynchronizer.IsUpload || DataSynchronizer.IsDownload) 
+            //    { return; }
+            //await DataSynchronizer.Download();
+            //await DataSynchronizer.Upload();            
+        });
+        await hub.StartAsync();
+    }
+    public async ValueTask DisposeAsync()
+    {
+        //DataSynchronizer.OnUpdate -= StateHasChanged;
+        //DataSynchronizer.OnError -= HandleSyncError;
+        await hub!.DisposeAsync();
+    }
+
+    void HandleSyncError(Exception ex)
+    {
+        syncException = ex;
+        StateHasChanged();
+    }   
+
+}

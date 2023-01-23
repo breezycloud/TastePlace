@@ -1,0 +1,62 @@
+﻿@using TastePlace.Client.Pages.Users;
+<AuthorizeView>
+    <Authorized>
+        <TastePlace.Client.Pages.Sync.ConnectionBar/>
+@*        <MudTooltip Duration="1000" Text="@(LayoutService!.IsDarkMode ? "Switch to Light Theme" : "Switch to Dark Theme")">
+            <MudIconButton Icon="@(LayoutService.IsDarkMode ? @Icons.Material.Rounded.LightMode : @Icons.Material.Outlined.DarkMode)"
+                           Color="Color.Inherit" OnClick="@LayoutService.ToggleDarkMode" />
+        </MudTooltip>*@
+        <MudMenu Dense="true" Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End"
+            PopoverClass="docs-layout-menu-shadow" ListClass="d-flex flex-column" 
+            LockScroll="true" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopRight">                                    
+            <ChildContent>
+                <MudStack Row="true" Class="pa-1" AlignItems="AlignItems.Center" Justify="Justify.FlexStart">
+                    <MudAvatar>
+                        <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Size="Size.Medium"/>
+                    </MudAvatar>
+                    <MudText Align="Align.Start">@context.User!.Identity!.Name</MudText>
+                </MudStack>
+                <MudDivider />
+                <MudMenuItem OnClick="@(() => nav.NavigateTo($"profile/{id}"))">Account</MudMenuItem>
+                <MudMenuItem OnClick="@(() => Dialog.Show<ChangePassword>("Change Password", new DialogParameters{["id"] = id}))">
+                    Change Password
+                </MudMenuItem>
+                <MudMenuItem OnClick="LogOut">Log Out</MudMenuItem> 
+            </ChildContent>            
+        </MudMenu>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    Guid id { get; set; }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            id = await localStorage.GetItemAsync<Guid>("uid");
+        }
+    }
+    async void Navigate()
+    {
+        var userID = await localStorage.GetItemAsync<string>("uid");
+        nav.NavigateTo($"/manageuser/{userID}");
+
+    }
+
+    //async void OpenDialog()
+    //{
+    //    var userID = await _localStorage.GetItemAsync<string>("uid");
+    //    var parameter = new DialogParameters { ["id"] = Guid.Parse(userID) };
+    //    DialogService.Show<ChangePassword>("", parameter);
+    //}
+
+    private async Task LogOut()
+    {
+        //var userID = await localStorage.GetItemAsync<Guid>("uid");
+        //var log = new UserLog(Guid.NewGuid(), userID, LogAction.LogOut, "Logged out");
+        await localStorage.RemoveItemAsync("token");
+        await localStorage.RemoveItemAsync("uid");
+        //await logService.AddLogAsync(log);
+        nav.NavigateTo("/", true);
+    }
+}

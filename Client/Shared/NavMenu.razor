@@ -1,0 +1,16 @@
+﻿<AuthorizeView Roles="Admin, Manager">
+    <MudNavMenu Color="Color.Primary" Margin="Margin.Dense" Rounded="true" Class="pa-2">
+        <MudNavLink Href="/dashboard">Dashboard</MudNavLink>
+        <MudNavLink Href="/customers">Customers</MudNavLink>
+        <MudNavLink Href="/categories">Categories</MudNavLink>
+        <MudNavLink Href="/products">Products</MudNavLink>
+        <MudNavLink Href="/orders">Orders</MudNavLink>
+        <MudNavGroup Title="System" >
+            @*<MudNavLink OnClick="@(() => Dialog.Show<Fx>("Forex"))">
+                Exchange Rate
+            </MudNavLink>*@
+            <MudNavLink Href="/sms">SMS</MudNavLink>
+            <MudNavLink Href="/users">Users</MudNavLink>
+        </MudNavGroup>
+    </MudNavMenu>
+</AuthorizeView>

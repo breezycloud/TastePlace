@@ -1,0 +1,34 @@
+﻿@page "/dashboard"
+@using TastePlace.Client.Pages.Dashboard
+@inject IDashboardService DashboardService
+@attribute [Authorize]
+
+<PageTitle>Dashboard</PageTitle>
+
+
+@code {
+    bool IsBusy = false;
+    DashboardModel model = new();
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationStateTask { get; set; } = default!;
+    protected override async Task OnInitializedAsync()
+    {
+        LayoutService.CurrentMenu = "Dashboard";
+        LayoutService.OnMajorUpdateOccured();
+        IsBusy = true;
+        var authState = await authenticationStateTask!;
+        var user = authState.User;
+        if (!user!.Identity!.IsAuthenticated)
+        {
+            nav.NavigateTo("/");
+        }
+        model = await DashboardService.GetDashboard();
+        IsBusy = false;
+    }
+
+    async Task Delete()
+    {
+        await js.InvokeVoidAsync("deleteDatabase");
+    }
+
+}

@@ -1,0 +1,36 @@
+﻿@using System.Net.Http
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Microsoft.AspNetCore.Components.WebAssembly.Http
+@using Microsoft.AspNetCore.Components.Authorization;
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.JSInterop
+@using TastePlace.Client
+@using TastePlace.Client.Interfaces;
+@using TastePlace.Client.Shared
+@using TastePlace.Client.Handlers
+@using TastePlace.Shared.Models
+@using TastePlace.Shared.Util
+@using TastePlace.Shared.Enums
+
+@using MudBlazor
+@using Blazored.LocalStorage
+
+@inject NavigationManager nav
+@inject ILocalStorageService localStorage
+@inject IJSRuntime js
+@inject CustomAuthenticationStateProvider CustomAuthenticationProvider
+@inject AppState AppState
+@inject LayoutService LayoutService
+
+@inject ISnackbar snackBar
+@inject IDialogService Dialog
+
+@inject IConverter _converter
+@inject IUserService UserService
+@inject IMenuService MenuService
+@inject IOrderService OrderService

@@ -1,0 +1,130 @@
+@page "/menus"
+@attribute [Authorize]
+
+@if (AppState.IsBusy)
+{
+    <LoaderRows />
+}
+else
+{
+    <MudTable Items="@Menus" Virtualize="true" Filter="new Func<GroupSubCategoryMenu, bool>(SearchMenu)"
+          Dense="true" Hover="true" Striped="true" Outlined="true">
+        <ToolBarContent>            
+            <MudTooltip Text="Report" Duration="1000" Placement="Placement.Top">
+                <MudIconButton Icon="@Icons.Material.Filled.Print" OnClick="@(() => Dialog.Show<ItemReportDialog>())" />
+            </MudTooltip>
+            <MudSpacer />
+            <MudTextField @bind-Value="searchString" Immediate="true" Placeholder="Search" Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Group</MudTh>
+            <MudTh>Sub Group</MudTh>
+            <MudTh>Category</MudTh>
+            <MudTh>Code</MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh Style="text-align:right;">Price</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Group">@context.Code</MudTd>
+            <MudTd DataLabel="Sub Group">@context.Code</MudTd>
+            <MudTd DataLabel="Category">@context.Code</MudTd>
+            <MudTd DataLabel="Code">@context.Code</MudTd>
+            <MudTd DataLabel="Name">@context.Menu</MudTd>
+            <MudTd DataLabel="Price" Style="text-align:right;">@context!.Price!.ToString("N2")</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudTooltip Text="Edit" Placement="Placement.Top">
+                    <MudFab Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                        OnClick="@(() => nav.NavigateTo($"editmenu/{context.Id}"))" IconSize="Size.Small" Color="Color.Info" />
+                </MudTooltip>                
+                <MudTooltip Text="Delete" Placement="Placement.Top">
+                    <MudFab Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Disabled="@isDeleting"
+                        OnClick="@(() => Delete(context))" IconSize="Size.Small" Color="Color.Error" />
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+    <div class="fabs-container">
+        <MudFab Class="fab" OnClick="@(() => nav.NavigateTo("newproduct"))" Color="Color.Primary" Icon="@Icons.Material.Filled.Add" />
+    </div>
+}
+
+@code {
+    private string searchString = "";
+    private GroupSubCategoryMenu[] Menus = Array.Empty<GroupSubCategoryMenu>();
+    private bool isDeleting = false;    
+    private string operationType => isEdit ? "Edit" : "Add";
+    public bool isEdit { get; set; }
+    private HubConnection? hub;
+    protected override async Task OnInitializedAsync()
+    {        
+        AppState.IsBusy = true;
+        LayoutService.CurrentMenu = "Manage Menu";
+        LayoutService.OnMajorUpdateOccured();      
+        hub = new HubConnectionBuilder().WithUrl(nav.ToAbsoluteUri("/hub")).WithAutomaticReconnect().Build();
+        await hub!.StartAsync();
+        hub.On("UpdateMenu", async () => 
+        {
+            await ReloadData();
+        });
+        await ReloadData();
+        AppState.IsBusy = false;
+    }
+
+
+    async Task Delete(GroupSubCategoryMenu menu)
+    {
+        isDeleting = true;
+        bool? result = await Dialog.ShowMessageBox("Confirmation",
+        $"Do you wish to Delete Menu?", yesText: "Yes", cancelText: "No");
+        if (result is null)
+        {
+            isDeleting = false;
+            return;
+        }
+        else if (!result.Value)
+        {
+            isDeleting = false;
+            return;
+        }        
+        try
+        {            
+            snackBar.Add($"Product successfully deleted!", Severity.Success);
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            snackBar.Add($"Error occured!", Severity.Error);
+        }
+        finally
+        {
+            await ReloadData();            
+            isDeleting = false;
+        }
+    }
+
+    private async Task ReloadData()
+    {
+        AppState.Menus = await MenuService.GetMenus();
+        StateHasChanged();
+    }
+
+    private bool SearchMenu(GroupSubCategoryMenu menu)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (menu!.Menu!.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (menu!.Code!.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (menu!.Group!.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (menu!.SubGroup!.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+}

@@ -1,0 +1,74 @@
+<EditForm Model="Category" OnValidSubmit="Save">
+    <DataAnnotationsValidator/>    
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">@string.Format("{0} Category", isAdd ? "Add" : "Edit")</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid Spacing="2">
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Category.CategoryName" Label="Category Name"
+                        Variant="Variant.Outlined" For="@(() => Category.CategoryName)"></MudTextField>      
+                </MudItem>                    
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Close</MudButton>
+            <MudButton Disabled="AppState.IsProcessing"ButtonType="ButtonType.Submit" Variant="Variant.Filled" 
+                Color="Color.Primary" >@(AppState.IsProcessing ? "Processing" : "Save")</MudButton>
+        </DialogActions>
+    </MudDialog>    
+</EditForm>
+
+    @code {
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }    
+    [Parameter] public Category Category { get; set; } = new();            
+    [Parameter] public bool isAdd { get; set; } = true;
+    private HubConnection? hub;
+
+    void Cancel() => nav.NavigateTo("categories");
+    protected override async Task OnInitializedAsync()
+    {
+        hub = new HubConnectionBuilder().WithUrl(nav.ToAbsoluteUri("/hubs")).WithAutomaticReconnect().Build();
+        await hub.StartAsync();
+    }
+    async Task Save()
+    {
+        AppState.IsProcessing = true;
+        var result = await Dialog.ShowMessageBox("Confirmation",
+        $"Do you wish to save", yesText: "Yes", cancelText: "No");
+        if (result is null)
+        {
+            AppState.IsProcessing= false;
+            return;        
+        }
+        else if (!result.Value)
+        {
+            AppState.IsProcessing = false;
+            return;
+        }        
+        try
+        {      
+            Category.CategoryName = StringConverter.ConvertToTitleCase(Category!.CategoryName!);            
+            if (isAdd)                           
+            {                
+
+                Category =new(); 
+            }
+            else
+            {                
+            }
+            await hub!.SendAsync("UpdateCategories");
+            snackBar.Add("Category Successfully Saved", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{ex.Message} {ex.InnerException} {ex.StackTrace} {ex.Source}");
+            snackBar.Add("Operation failed", Severity.Error);            
+        }
+        finally
+        {
+            AppState.IsProcessing = false;
+        }
+    }    
+}
